@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dobar Memory Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col items-center justify-center">
+
+    <!-- Container for the game -->
+    <div class="w-full max-w-screen-md mx-auto p-4">
+
+        <!-- Title -->
+        <h1 class="text-center text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-gray-100 to-gray-300 shadow-sm mb-6">
+            колку си dobar во меморија?
+        </h1>
+
+        <!-- Welcome screen -->
+        <div class="welcome-screen text-center bg-opacity-10 bg-white rounded-xl p-6 border border-white/20 shadow-lg mb-8">
+            <h2 class="text-xl font-semibold text-pink-500 mb-4">Правила на игра</h2>
+            <p class="text-base text-gray-200 mb-4">Најди ги паровите на dobar чорап што се совпаѓаат.</p>
+            <button class="bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-lg transition-transform hover:translate-y-[-2px] shadow-md" onclick="startGame()">стартувај</button>
+        </div>
+
+        <!-- Game container -->
+        <div class="game-container hidden flex flex-col items-center">
+            <div class="timer text-lg mb-4 p-2 bg-white bg-opacity-10 rounded-lg border border-white/20">
+                Време: 0 секунди
+            </div>
+            <div class="grid grid-cols-4 gap-4">
+                <!-- Cards will be dynamically inserted here -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Popup -->
+    <div class="popup hidden fixed inset-0 flex justify-center items-center bg-black bg-opacity-80 backdrop-blur-sm z-50">
+        <div class="bg-gray-800 p-6 rounded-xl text-center shadow-lg">
+            <h2 class="text-pink-500 text-xl font-semibold mb-4">Честитки!</h2>
+            <div class="completion-time text-lg mb-4"></div>
+            <div class="discount-amount text-2xl text-pink-500 font-bold mb-4"></div>
+            <div class="discount-code bg-green-100 text-green-700 p-3 rounded-md border border-green-400 mb-6"></div>
+            <button class="bg-pink-500 text-white px-6 py-3 rounded-lg" onclick="window.location.href='https://dobarcorap.com/product/dobar-corap'">клик кон dobar</button>
+        </div>
+    </div>
+
+    <!-- Overlay for Popup -->
+    <div class="overlay hidden fixed inset-0 bg-black bg-opacity-60 z-40"></div>
+
+    <!-- Footer -->
+    <footer class="text-center text-sm text-gray-400 mt-6">
+        made by <a href="https://dobarcorap.com" class="text-pink-500 hover:underline">dobar</a> 2024, сите права задржани
+    </footer>
+
+    <script>
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let timer = 0;
+        let timerInterval;
+        let gameStarted = false;
+
+        const sockImages = [
+            'https://dobarcorap.com/wp-content/uploads/2021/10/122061143_385823655779508_271113130392653854_n-1024x1024.jpg',
+            'https://dobarcorap.com/wp-content/uploads/2021/11/viber_image_2021-11-18_17-59-39-827-1-1024x1024.jpg',
+            'https://scontent.fskp4-1.fna.fbcdn.net/v/t39.30808-6/396705258_790391326435981_8159244706954236373_n.jpg?stp=cp6_dst-jpg&_nc_cat=111&ccb=1-7&_nc_sid=127cfc&_nc_ohc=abtaX26C6uQQ7kNvgE7epg5&_nc_ht=scontent.fskp4-1.fna&_nc_gid=AOSAriGTlf6m94aj_JlJyni&oh=00_AYC657pImMCPpjhpQP6VAtpUlkW7wIT1NI5JyX4vjnqjIg&oe=6705D89B',
+            'https://scontent.fskp4-1.fna.fbcdn.net/v/t39.30808-6/331024050_1373196033512067_7478774526885719125_n.jpg?stp=cp6_dst-jpg&_nc_cat=104&ccb=1-7&_nc_sid=127cfc&_nc_ohc=0aIIS7-o8e0Q7kNvgH6_0Tq&_nc_ht=scontent.fskp4-1.fna&_nc_gid=A4cUrd8wd8Tq--liZAHSqzE&oh=00_AYCTPokjCKUk2XXXOfZRY35Ae0bx_C4zUKkJIpFEvfnk0g&oe=6705CF32',
+            'https://scontent.fskp4-1.fna.fbcdn.net/v/t39.30808-6/272102111_4810673325666028_8454958159431851307_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=833d8c&_nc_ohc=bIQ6ALP8QewQ7kNvgGORHaw&_nc_ht=scontent.fskp4-1.fna&_nc_gid=AdZ1S1ViZzYKmCE83jjWKe-&oh=00_AYDp8cdjWbSb22JttlE0GsaayR1eJvT0ivfCUbEVRTl1OQ&oe=6705F954',
+            'https://scontent.fskp4-1.fna.fbcdn.net/v/t1.6435-9/154762107_3797023310364373_6182554160763048114_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=06a7ca&_nc_ohc=uFxulgAsOxMQ7kNvgHXp9Ho&_nc_ht=scontent.fskp4-1.fna&_nc_gid=AKu0KZ8zv_Gb5vlHDX83Gx9&oh=00_AYBXrZ8btgMXPbF_nIxOzFfLv2RJw6zbFAOR-6p2052lbg&oe=672795AA',
+            'https://scontent.fskp4-2.fna.fbcdn.net/v/t1.6435-9/168038985_3889956804404356_7133974858336304909_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=7b2446&_nc_ohc=xLkYKVntlzoQ7kNvgExqzwb&_nc_ht=scontent.fskp4-2.fna&_nc_gid=AzIw0_Zb99LAAVmbQ_ajam7&oh=00_AYDyKDJfgxosgrKPkwHGoXrcWQfjYFSvjJVMrUKvOxfwnw&oe=67276D9F',
+            'https://scontent.fskp4-2.fna.fbcdn.net/v/t39.30808-6/425341076_850767943731652_4549784077146168161_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=127cfc&_nc_ohc=7WwgWp82PQ4Q7kNvgENL8Gq&_nc_ht=scontent.fskp4-2.fna&_nc_gid=AWhdUCVPmR5I75_LkznA9v9&oh=00_AYCXkmwg-EqJD-3r4Y__GZZdDnRZaTRqwtogbq7DU6AlHQ&oe=6705D784'
+        ];
+
+        function startGame() {
+            document.querySelector('.welcome-screen').classList.add('hidden');
+            document.querySelector('.game-container').classList.remove('hidden');
+
+            initializeGame();
+            startTimer();
+        }
+
+        function initializeGame() {
+            const grid = document.querySelector('.grid');
+            grid.innerHTML = '';
+            cards = [];
+            flippedCards = [];
+            matchedPairs = 0;
+            timer = 0;
+            gameStarted = true;
+
+            const cardPairs = [...sockImages, ...sockImages];
+            shuffleArray(cardPairs);
+
+            cardPairs.forEach((img, index) => {
+                const card = document.createElement('div');
+                card.className = 'card w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 bg-gray-900 rounded-lg border border-white/10 shadow-md cursor-pointer transition-transform hover:translate-y-[-2px] flex justify-center items-center';
+                card.innerHTML = `<img src="${img}" alt="sock" class="w-full h-full object-cover rounded-lg hidden">`;
+                card.setAttribute('data-index', index);
+                card.addEventListener('click', () => flipCard(card), { passive: true });
+                grid.appendChild(card);
+                cards.push(card);
+            });
+        }
+
+        function flipCard(card) {
+            if (flippedCards.length === 2 || card.classList.contains('flipped')) return;
+
+            card.classList.add('flipped');
+            card.querySelector('img').classList.remove('hidden');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                setTimeout(checkMatch, 500);
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            const match = card1.querySelector('img').src === card2.querySelector('img').src;
+
+            if (match) {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+
+                if (matchedPairs === 8) {
+                    endGame();
+                }
+            } else {
+                card1.classList.remove('flipped');
+                card1.querySelector('img').classList.add('hidden');
+                card2.classList.remove('flipped');
+                card2.querySelector('img').classList.add('hidden');
+            }
+
+            flippedCards = [];
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timer++;
+                document.querySelector('.timer').textContent = `Време: ${timer} секунди`;
+            }, 1000);
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+
+            const popup = document.querySelector('.popup');
+            const completionTime = popup.querySelector('.completion-time');
+            const discountAmount = popup.querySelector('.discount-amount');
+            const discountCode = popup.querySelector('.discount-code');
+
+            completionTime.textContent = `Твоето време: ${timer} секунди`;
+
+            let discount, code;
+            if (timer <= 15) {
+                discount = "10%";
+                code = "DOBAR10";
+            } else {
+                discount = "5%";
+                code = "GAMER5";
+            }
+
+            discountAmount.textContent = `${discount} ПОПУСТ!`;
+            discountCode.textContent = `Освои ${discount} попуст на твојата следна нарачка на dobar mysterybox, искористи го ${code} сега!`;
+
+            popup.classList.remove('hidden');
+            document.querySelector('.overlay').classList.remove('hidden');
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+    </script>
+</body>
+</html>
+
